@@ -1,0 +1,1 @@
+`define ADD_WIDTH 2
