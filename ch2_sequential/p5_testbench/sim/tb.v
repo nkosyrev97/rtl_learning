@@ -85,64 +85,62 @@ module up_down_4bit_counter_tb();
         $display("=== START TESTBENCH ===");
 
         // 1st test: sync rst_n
-        @(posedge clk);  // wait for the next 'posedge clk'
-        #10;             // delay to match post-synth/impl timing simulation (setup/hold deltas)
-        rst_n <= 0;      // NBA for synced signals!
+        @(posedge clk);  // wait for the next 'posedge clk' event
+        rst_n <= #1 0;   // NBA for synced signals with 1 ns delay for post-synth/impl timing simulation!
+        @(posedge clk);
         @(posedge clk);  // rst_n 1 -> 0, count X -> 0
-        #10;
-        rst_n <= 1;
-        @(negedge clk); // always check signals after @(negedge clk)!
         check_output(4'd0, "Test 1: Active sync reset");
+        rst_n <= #1 1;
 
         // 2nd test: sync input data load
         @(posedge clk);
-        #10;
-        load_data <= 4'd12; // sync signals should be set after 'posedge clk' (post-synthesis)
-        sync_load <= 1;
+        load_data <= #1 4'd12;
+        sync_load <= #1 1;
         @(posedge clk);
-        #10;
-        sync_load <= 0;
-        @(negedge clk);
+        @(posedge clk);
         check_output(4'd12, "Test 2: Sync input data load");
+        sync_load <= #1 0;
 
         // 3rd test: increment counter (up_down = 1 at this moment)
-        @(posedge clk); @(negedge clk); check_output(4'd13, "Test 3: Count up (+1)");
-        @(posedge clk); @(negedge clk); check_output(4'd14, "Test 3: Count up (+2)");
-        @(posedge clk); @(negedge clk); check_output(4'd15, "Test 3: Count up (+3)");
+        @(posedge clk);
+        @(posedge clk);
+        check_output(4'd13, "Test 3: Count up (+1)");
+        @(posedge clk);
+        check_output(4'd14, "Test 3: Count up (+2)");
+        @(posedge clk);
+        check_output(4'd15, "Test 3: Count up (+3)");
         // Overflow check (15 -> 0)
-        @(posedge clk); @(negedge clk); check_output(4'd0,  "Test 3: Overflow up (15->0)");
+        @(posedge clk);
+        check_output(4'd0,  "Test 3: Overflow up (15->0)");
 
         // 4th test: decrement counter
-        @(posedge clk); // count 0 -> 1
-        #10;
-        up_down <= 0;
+        up_down <= #1 0;
         // Inverse overfow check (0 -> 15)
+        @(posedge clk); // count 0 -> 1
         @(posedge clk); // count 1 -> 0
         @(posedge clk); // count 0 -> 15
-        @(negedge clk);
         check_output(4'd15, "Test 4: Overflow down (0->15)");
         for (i = 14; i >= 0; i = i - 1) begin
             $sformat(dynamic_test_name, "Test 4: Count down (-%0d)", (14 - i + 1));
-            @(posedge clk); @(negedge clk);
+            @(posedge clk);
             check_output(i[3:0], dynamic_test_name);
         end
         $display("Test 4: From 15 to 0 counts are tested");
 
         // 5th test: test 'rst_n' priority over 'sync_load'
+        load_data <= #1 4'd7;
+        sync_load <= #1 1;
+        rst_n     <= #1 0;
         @(posedge clk);
-        #10;  // once again - this delay may be omitted for functional simulation but is needed for timing simulation
-        load_data <= 4'd7;
-        sync_load <= 1;
-        rst_n <= 0;
         @(posedge clk);
-        #10;
-        rst_n <= 1;
-        sync_load <= 0;
-        @(negedge clk);
         check_output(4'd0, "Test 5: rst_n/sync_load priority test");
+        rst_n     <= #1 1;
+        sync_load <= #1 0;
 
         // Results:
-        #100;
+        @(posedge clk);
+        @(posedge clk);
+        @(posedge clk); // to see final state in the wavetable
         $display("\n=== RESULTS ===");
         $display("Successful tests: %0d", success_tests);
         $display("Errors total: %0d", errors);
